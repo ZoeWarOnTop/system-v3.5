@@ -1,0 +1,183 @@
+--// .Zoewar MM2 Script (Fundo mais transparente + Sem Recarga + Sem Recuo + Som Clássico + Gingerscope)
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local SoundService = game:GetService("SoundService")
+
+local player = Players.LocalPlayer
+
+local enabled = false
+local connection
+
+local OLD_SOUND_ID = "rbxassetid://6968135315" -- Som clássico de equipar arma (2023-2024)
+
+--// GUI
+local gui = Instance.new("ScreenGui")
+gui.Parent = game.CoreGui
+gui.Name = "zoewar"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+
+-- Fundo estilo cápsula (mais transparente agora)
+local main = Instance.new("Frame")
+main.Parent = gui
+main.Size = UDim2.new(0, 135, 0, 32)
+main.Position = UDim2.new(0.5, -67, 0.75, 0)
+main.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+main.BackgroundTransparency = 0.5 -- Fundo mais transparente para ver melhor o cenário
+main.BorderSizePixel = 0
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = main
+
+-- Texto
+local title = Instance.new("TextLabel")
+title.Parent = main
+title.BackgroundTransparency = 1
+title.Size = UDim2.new(0.55, 0, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.Font = Enum.Font.GothamBold
+title.Text = ".zoewar"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ON/OFF
+local toggle = Instance.new("TextButton")
+toggle.Parent = main
+toggle.Size = UDim2.new(0, 42, 0, 22)
+toggle.Position = UDim2.new(1, -50, 0.5, -11)
+toggle.Font = Enum.Font.GothamBold
+toggle.TextScaled = true
+toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggle.BorderSizePixel = 0
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(1, 0)
+toggleCorner.Parent = toggle
+
+-- Configuração do Som de Equipar/Desequipar Antigo
+local equipSound = Instance.new("Sound")
+equipSound.Name = "ZoewarEquipSound"
+equipSound.SoundId = OLD_SOUND_ID
+equipSound.Volume = 1
+equipSound.Parent = SoundService
+
+--// Função para identificar se é uma arma do MM2 (incluindo Gingerscope e todas as outras)
+local function isGun(tool)
+    if not tool or not tool:IsA("Tool") then return false end
+    local nameLower = tool.Name:lower()
+    if nameLower:find("gun") or nameLower:find("sheriff") or nameLower:find("revolver") or nameLower:find("pistol") or nameLower:find("gingerscope") or nameLower:find("blaster") then
+        return true
+    end
+    if tool:FindFirstChild("Handle") and (tool:FindFirstChild("Shoot") or tool:FindFirstChild("ServerSpew") or tool:FindFirstChild("ClientAmmo")) then
+        return true
+    end
+    return false
+end
+
+--// Atualizar UI
+local function updateUI()
+	if enabled then
+		toggle.Text = "ON"
+		toggle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+	else
+		toggle.Text = "OFF"
+		toggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+	end
+end
+
+--// Bloqueio de animações indesejadas (Recarga e Recuo/Disparo)
+local function setup(character)
+	local humanoid = character:WaitForChild("Humanoid")
+	local animator = humanoid:WaitForChild("Animator")
+
+	if connection then
+		connection:Disconnect()
+	end
+
+	connection = animator.AnimationPlayed:Connect(function(track)
+		if enabled then
+			local animId = track.Animation and track.Animation.AnimationId or ""
+			local nameLower = track.Name:lower()
+			
+			-- Bloqueia recarga e animações de recuo/disparo (shoot, fire, recoil, kickback)
+			if animId:find("558601175") or nameLower:find("reload") or nameLower:find("shoot") or nameLower:find("fire") or nameLower:find("recoil") or nameLower:find("kick") then
+				track:Stop()
+			end
+		end
+	end)
+
+	character.ChildAdded:Connect(function(child)
+		if enabled and isGun(child) then
+			equipSound:Play()
+		end
+	end)
+
+	character.ChildRemoved:Connect(function(child)
+		if enabled and isGun(child) then
+			equipSound:Play()
+		end
+	end)
+end
+
+if player.Character then
+	setup(player.Character)
+end
+
+player.CharacterAdded:Connect(setup)
+
+toggle.MouseButton1Click:Connect(function()
+	enabled = not enabled
+	updateUI()
+end)
+
+updateUI()
+
+--// DRAG MOBILE/PC
+local dragging = false
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+
+	main.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+main.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+
+		dragging = true
+		dragStart = input.Position
+		startPos = main.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+main.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+	or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
+	end
+end)
+
