@@ -1,166 +1,112 @@
---// _zoew4r MM2 Script
---// UI based on _thurs4x GUI
+--// .Zoewar MM2 Script (UI Cápsula, Tecla 'E' para PC, Suporte PC e Mobile)
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
 
 local player = Players.LocalPlayer
-
 local enabled = false
-local connection
 
-local OLD_SOUND_ID = "rbxassetid://6968135315"
-
---// GUI
+-- Criar ScreenGui
 local gui = Instance.new("ScreenGui")
-gui.Name = "_zoew4r"
-gui.Parent = game.CoreGui
+gui.Name = "zoewar"
 gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
-local frame = Instance.new("Frame")
-frame.Parent = gui
-frame.Size = UDim2.new(0, 120, 0, 28)
-frame.Position = UDim2.new(0.72, 0, 0.08, 0)
-frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-frame.BackgroundTransparency = 0.15
-frame.Active = true
-frame.Draggable = true
+-- Fundo estilo cápsula com fundo transparente
+local main = Instance.new("Frame")
+main.Parent = gui
+main.Size = UDim2.new(0, 135, 0, 32)
+main.Position = UDim2.new(0.5, -67, 0.75, 0)
+main.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+main.BackgroundTransparency = 0.5
+main.BorderSizePixel = 0
 
 local corner = Instance.new("UICorner")
-corner.Parent = frame
 corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = main
 
-local stroke = Instance.new("UIStroke")
-stroke.Parent = frame
-stroke.Color = Color3.fromRGB(255, 255, 255)
-stroke.Transparency = 0.7
-stroke.Thickness = 1
-
---// Glass / iOS style gradient
-local gradient = Instance.new("UIGradient")
-gradient.Parent = frame
-gradient.Color = ColorSequence.new{
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 35)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 15))
-}
-
---// Title
+-- Texto (".zoewar") à esquerda
 local title = Instance.new("TextLabel")
-title.Parent = frame
+title.Parent = main
 title.BackgroundTransparency = 1
-title.Position = UDim2.new(0.06, 0, 0, 0)
-title.Size = UDim2.new(0, 60, 1, 0)
+title.Size = UDim2.new(0.55, 0, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
 title.Font = Enum.Font.GothamBold
-title.Text = "_zoew4r"
-title.TextScaled = true
+title.Text = ".zoewar"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.TextXAlignment = Enum.TextXAlignment.Left
 
---// Toggle button
+-- Botão ON/OFF à direita em formato de pílula
 local toggle = Instance.new("TextButton")
-toggle.Parent = frame
-toggle.Size = UDim2.new(0, 40, 0, 18)
-toggle.Position = UDim2.new(0.63, 0, 0.18, 0)
-toggle.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+toggle.Parent = main
+toggle.Size = UDim2.new(0, 42, 0, 22)
+toggle.Position = UDim2.new(1, -50, 0.5, -11)
 toggle.Font = Enum.Font.GothamBold
-toggle.Text = "OFF"
 toggle.TextScaled = true
 toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggle.BorderSizePixel = 0
 
 local toggleCorner = Instance.new("UICorner")
-toggleCorner.Parent = toggle
 toggleCorner.CornerRadius = UDim.new(1, 0)
+toggleCorner.Parent = toggle
 
---// Equip / Unequip sound
+-- Configuração do Som de Equipar/Desequipar
 local equipSound = Instance.new("Sound")
 equipSound.Name = "ZoewarEquipSound"
-equipSound.SoundId = OLD_SOUND_ID
-equipSound.Volume = 1
+equipSound.SoundId = "rbxassetid://12221976" -- Som clássico
+equipSound.Volume = 0.5
 equipSound.Parent = SoundService
 
---// Identify MM2 guns
-local function isGun(tool)
-	if not tool or not tool:IsA("Tool") then
-		return false
-	end
-
-	local nameLower = tool.Name:lower()
-
-	if nameLower:find("gun")
-		or nameLower:find("sheriff")
-		or nameLower:find("revolver")
-		or nameLower:find("pistol")
-		or nameLower:find("gingerscope")
-		or nameLower:find("blaster") then
-		return true
-	end
-
-	if tool:FindFirstChild("Handle")
-		and (
-			tool:FindFirstChild("Shoot")
-			or tool:FindFirstChild("ServerSpew")
-			or tool:FindFirstChild("ClientAmmo")
-		) then
-		return true
-	end
-
-	return false
-end
-
---// Update UI
+-- Função para atualizar visual do botão
 local function updateUI()
 	if enabled then
+		title.Text = ".Zoewar ON"
+		title.TextColor3 = Color3.fromRGB(0, 255, 128)
 		toggle.Text = "ON"
-		toggle.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
+		toggle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
 	else
+		title.Text = ".Zoewar OFF"
+		title.TextColor3 = Color3.fromRGB(255, 75, 75)
 		toggle.Text = "OFF"
-		toggle.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+		toggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 	end
 end
 
---// Toggle state
+-- Função para alternar o estado (ON/OFF)
 local function toggleState()
 	enabled = not enabled
 	updateUI()
+	equipSound:Play()
 end
 
---// Animation blocking
-local function setup(character)
-	local humanoid = character:WaitForChild("Humanoid")
-	local animator = humanoid:WaitForChild("Animator")
-
-	if connection then
-		connection:Disconnect()
-	end
-
-	connection = animator.AnimationPlayed:Connect(function(track)
-		if enabled then
-			local animId = track.Animation and track.Animation.AnimationId or ""
-			local nameLower = track.Name:lower()
-
-			if animId:find("558601175")
-				or nameLower:find("reload")
-				or nameLower:find("shoot")
-				or nameLower:find("fire")
-				or nameLower:find("recoil")
-				or nameLower:find("kick") then
-
-				track:Stop()
+-- Lógica para remover recarga/recuo da arma
+local function applyGunMod(tool)
+	if tool:IsA("Tool") and tool:FindFirstChild("GunScript") then
+		-- Modifica os atributos se a ferramenta for a pistola do MM2
+		task.spawn(function()
+			local gunScript = tool:FindFirstChild("GunScript")
+			if gunScript then
+				-- Tenta modificar os valores de Delay/Cooldown na arma se existirem
+				for _, v in pairs(tool:GetDescendants()) do
+					if v:IsA("NumberValue") or v:IsA("IntValue") then
+						if v.Name:lower():find("cooldown") or v.Name:lower():find("delay") or v.Name:lower():find("reload") then
+							v.Value = 0
+						end
+					end
+				end
 			end
-		end
-	end)
+		end)
+	end
+end
 
-	character.ChildAdded:Connect(function(child)
-		if enabled and isGun(child) then
-			equipSound:Play()
-		end
-	end)
-
-	character.ChildRemoved:Connect(function(child)
-		if enabled and isGun(child) then
-			equipSound:Play()
+-- Monitorar quando o jogador pega um item
+local function setup(char)
+	char.ChildAdded:Connect(function(child)
+		if enabled then
+			applyGunMod(child)
 		end
 	end)
 end
@@ -171,16 +117,17 @@ end
 
 player.CharacterAdded:Connect(setup)
 
---// Toggle button
+-- Ação ao clicar no botão ON/OFF (Compatível PC/Mobile)
 toggle.Activated:Connect(function()
 	toggleState()
 end)
 
---// E key toggle
+-- Atalho com a Tecla "E" (Apenas PC, ignorando se estiver digitando no chat)
 UIS.InputBegan:Connect(function(input, gameProcessed)
 	if not gameProcessed and input.KeyCode == Enum.KeyCode.E then
 		toggleState()
 	end
 end)
 
+-- Inicializa o estado visual da interface
 updateUI()
