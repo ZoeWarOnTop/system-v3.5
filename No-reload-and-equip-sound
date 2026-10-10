@@ -9,7 +9,7 @@ local player = Players.LocalPlayer
 local enabled = true
 local connection
 
-local OLD_SOUND_ID = "rbxassetid://87157093158382" -- Som clássico
+local OLD_SOUND_ID = "rbxassetid://87157093158382" -- Som atualizado
 
 --// GUI (Halloween Theme + Movimentação Completa PC & Mobile)
 local gui = Instance.new("ScreenGui")
